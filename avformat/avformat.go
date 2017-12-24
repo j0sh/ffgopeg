@@ -228,9 +228,26 @@ func (s *Stream) SideData(t PacketSideDataType) []byte {
 // NewOutputFormatContext allocates a FormatContext for an output format.
 //
 // C-Function: avformat_alloc_output_context2
-func NewOutputFormatContext(outFormat *OutputFormat, formatName, fileName string) (*FormatContext, avutil.ReturnCode) {
+func NewOutputFormatContext(outFormat *OutputFormat, formatName *string, fileName *string) (*FormatContext, avutil.ReturnCode) {
 	var ctx *FormatContext
-	code := avutil.NewReturnCode(int(C.avformat_alloc_output_context2((**C.struct_AVFormatContext)(unsafe.Pointer(&ctx)), (*C.struct_AVOutputFormat)(outFormat), C.CString(formatName), C.CString(fileName))))
+	// XXX verify this no longer leaks memory
+	var cfmt *C.char
+	var cfname *C.char
+	cfmt = nil
+	cfname = nil
+	if formatName != nil {
+		cfmt = C.CString(*formatName)
+	}
+	if fileName != nil {
+		cfname = C.CString(*fileName)
+	}
+	code := avutil.NewReturnCode(int(C.avformat_alloc_output_context2((**C.struct_AVFormatContext)(unsafe.Pointer(&ctx)), (*C.struct_AVOutputFormat)(outFormat), cfmt, cfname)))
+	if formatName != nil {
+		C.free(unsafe.Pointer(cfmt))
+	}
+	if fileName != nil {
+		C.free(unsafe.Pointer(cfname))
+	}
 	return ctx, code
 }
 
